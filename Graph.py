@@ -28,7 +28,10 @@ class Graph:
             self.g = nx.Graph(edgeList)
         
         nx.set_edge_attributes(self.g, edge_attrs, 'label')
-        
+    
+    def add_sta(self, sta=0):
+        self.g.add_edge(*('sta', sta))
+    
     def random_graph(self) -> list[list[int]]:
         k = BRANCHING_FACTOR
         print(f'Randomed branching factor k = {k}')
@@ -63,9 +66,11 @@ class Graph:
         return edgeList
     
     def is_tree(self):
+        if self.g.is_directed():
+            return nx.is_tree(self.g.to_undirected())
         return nx.is_tree(self.g)
     
-    def random_spanning_tree(self):
+    def generate_random_spanning_tree(self):
         if self.is_tree():
             return self
         else:
@@ -73,9 +78,9 @@ class Graph:
             
             # Use Algorithm 4
             edges = []
-            sta = 0
-            visited = np.zeros(self.g.number_of_nodes(), dtype=bool)
-            parents = np.zeros(self.g.number_of_nodes(), dtype=int)
+            sta = 'sta'
+            visited = {node: False for node in self.g.nodes()}
+            parents = dict()
             
             while len(edges) != self.g.number_of_nodes() - 1:
                 visited[sta] = True
@@ -103,21 +108,33 @@ class Graph:
                     
             self.t = Graph(edges, directed=False)
             self.B = non_tree_edges
-        
+            self.t.label()
+           
+    def get_spanning_tree(self):
+        if not hasattr(self, 't'):
+            self.generate_random_spanning_tree()
+        return self.t, self.B
+    
+    def label_reverse(self, parents: list[int]):
+        for i in range(0, self.g.number_of_nodes()):
+            if i in parents:
+                self.g.edges[(i, parents[i])]['label'] = - self.g.edges[(parents[i], i)]['label']
+    
     def label(self):
         assert self.is_tree(), "Method only applicable to trees"
 
-        parents = dict(nx.bfs_predecessors(self.g, 0))
+        parents = dict(nx.bfs_predecessors(self.g, 'sta'))
 
         def is_leaf(node):
             if self.is_directed:
-                return self.g.in_degree(node) == 1 and self.g.out_degree(node) == 0
+                # Leaf as in an undirected graph
+                return self.g.in_degree(node) == 1 and node != 'sta'
             else:
-                return self.g.degree(node) == 1 and node != 0
+                return self.g.degree(node) == 1 and node != 'sta'
         
         def get_edge_info(node):
             adj = list(self.g[node])
-            edge_labels = [self.g.edges[(node, out)]['label'] for out in adj]      
+            edge_labels = [self.g.edges[(node, neighbor)]['label'] for neighbor in adj]      
             label_counts = Counter(edge_labels)
             return adj, edge_labels, label_counts
         
@@ -127,7 +144,7 @@ class Graph:
         buffer = [x for x in self.g.nodes() 
                   if is_leaf(x)]
         while len(buffer) != 0:
-            node = buffer.pop()
+            node = buffer.pop(0)
             
             if is_leaf(node):
                 parent = get_parent(node)
@@ -137,36 +154,82 @@ class Graph:
                 adj, edge_labels, label_counts = get_edge_info(node)
                 
                 if label_counts[-1] == 1:
-                    out = adj[edge_labels.index(-1)]
+                    child = adj[edge_labels.index(-1)]
                     l_max = max(edge_labels)
                     if l_max == -1: continue
                     max_cout = label_counts[l_max]
                     if max_cout == 1:
-                        self.g.edges[(node, out)]['label'] = l_max
+                        self.g.edges[(node, child)]['label'] = l_max
                     else:
-                        self.g.edges[(node, out)]['label'] = l_max + 1
+                        self.g.edges[(node, child)]['label'] = l_max + 1
               
-            if node != 0:
+            if node != 'sta':
                 parent = get_parent(node)
                 adj, edge_labels, label_counts = get_edge_info(parent)
                 if label_counts[-1] == 1:
                     buffer.append(parent)
-                  
-    def visualize(self):
+        
+        # Label root
+        # adj, edge_labels, label_counts = get_edge_info(0)
+        # max_edge = max(edge_labels)
+        # if label_counts[max_edge] == 1:
+        #     self.mu = max_edge
+        # else:
+        #     self.mu = max_edge + 1
+        self.mu = self.g.edges[('sta', 0)]['label']
+        self.g = self.g.to_directed()
+        self.label_reverse(parents)
+        
+    def visualize(self, save=False, filename='testrun'):
         if not self.is_tree():
-            pos = nx.spring_layout(self.g, k=3)
-            nx.draw(self.g, pos=pos, with_labels=True)
-            nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
+            if not hasattr(self, 't'):
+                pos = nx.spring_layout(self.g, k=3)
+                nx.draw(self.g, pos=pos, with_labels=True)
+                # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
+            else:
+                pos = nx.spring_layout(self.g, k=3)
+                nx.draw_networkx_nodes(self.g, pos=pos)
+                nx.draw_networkx_labels(self.g, pos=pos)
+                tree_edges = self.t.g.edges()
+                non_tree_edges = self.B
+                nx.draw_networkx_edges(self.g, pos=pos, edgelist=tree_edges, edge_color='r')
+                nx.draw_networkx_edges(self.g, pos=pos, edgelist=non_tree_edges, style='dashed')
         else:
-            pos = nx.nx_agraph.graphviz_layout(self.g, prog='dot')
-            nx.draw(self.g, pos=pos, with_labels=True)
-            nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
-        plt.show()
+            if self.g.is_directed():
+                pos = nx.nx_agraph.graphviz_layout(self.g, prog='dot',args="-Grankdir=LR")
+                try:
+                    visited_nodes = {node for node in self.g.nodes() if self.g.nodes[node]['visited']}
+                except KeyError:
+                    visited_nodes = set()
+                colors = ['g' if node in visited_nodes else 'b' for node in self.g.nodes()]
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors)
+                nx.draw_networkx_labels(self.g, pos=pos)
+                nx.draw_networkx_labels(self.g, pos={k: (x, y + 7.5) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r')
+                
+                G = self.g
+                curved_edges = [edge for edge in G.edges() if reversed(edge) in G.edges()]
+                straight_edges = list(set(G.edges()) - set(curved_edges))
+                nx.draw_networkx_edges(G, pos)
+                # arc_rad = 0.15
+                # nx.draw_networkx_edges(G, pos, edgelist=curved_edges, connectionstyle=f'arc3, rad = {arc_rad}')
+                # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
+                
+            else:
+                pos = nx.nx_agraph.graphviz_layout(self.g, prog='dot')
+                nx.draw(self.g, pos=pos, with_labels=True)
+                # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
+        
+        if save:
+            plt.savefig(filename)
+            plt.close()
+        else:
+            plt.show()
             
     
     
 if __name__ == "__main__":
     g = Graph()
+    g.add_sta()
     print('Vertex number: ',g.g.number_of_nodes())
     print('Edge number: ', len(g.g.edges()))
     print('Actual Branching Factor', np.average([tup[1] for tup in g.g.degree()]))
@@ -175,12 +238,13 @@ if __name__ == "__main__":
     
     print()
     print("Random spanning tree")
-    g.random_spanning_tree()
-    print(g.t.g[0])
-    print('is tree: ',g.t.is_tree())
-    print('Vertex number: ', len(g.t.g.nodes()))
-    print(f'Tree edges:{len(g.t.g.edges())} \nNon-tree edges: {len(g.B)}')
-    g.t.visualize()
+    g.generate_random_spanning_tree()
+    g.visualize()
+    # print(g.t.g[0])
+    # print('is tree: ',g.t.is_tree())
+    # print('Vertex number: ', len(g.t.g.nodes()))
+    # print(f'Tree edges:{len(g.t.g.edges())} \nNon-tree edges: {len(g.B)}')
+    # g.t.visualize()
     
-    g.t.label()
-    g.t.visualize()
+    # g.t.label()
+    # g.t.visualize()
