@@ -180,12 +180,15 @@ class Graph:
         self.g = self.g.to_directed()
         self.label_reverse(parents)
         
-    def visualize(self, save=False, filename='testrun'):
+    def visualize(self, save=False, filename='testrun', ax=None):
+        if ax is None:
+            fig, ax = plt.subplots(1,1, figsize=(10, 10))
+        
         if not self.is_tree():
             if not hasattr(self, 't'):
                 pos = nx.spring_layout(self.g, k=3)
-                nx.draw(self.g, pos=pos, with_labels=True, node_color='c')
-                # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
+                nx.draw(self.g, pos=pos, with_labels=True, node_color='c', ax=ax)
+                # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6, ax=ax)
             else:
                 pos = nx.spring_layout(self.g, k=3)
                 try:
@@ -193,13 +196,13 @@ class Graph:
                 except KeyError:
                     visited_nodes = set()
                 colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
-                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors)
-                nx.draw_networkx_labels(self.g, pos=pos)
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, ax=ax)
+                nx.draw_networkx_labels(self.g, pos=pos, ax=ax)
 
                 tree_edges = self.t.g.edges()
                 non_tree_edges = self.B
-                nx.draw_networkx_edges(self.g, pos=pos, edgelist=tree_edges, edge_color='r')
-                nx.draw_networkx_edges(self.g, pos=pos, edgelist=non_tree_edges, style='dashed')
+                nx.draw_networkx_edges(self.g, pos=pos, edgelist=tree_edges, edge_color='r', ax=ax)
+                nx.draw_networkx_edges(self.g, pos=pos, edgelist=non_tree_edges, style='dashed', ax=ax)
         else:
             if self.g.is_directed():
                 pos = nx.nx_agraph.graphviz_layout(self.g, prog='dot',args="-Grankdir=LR")
@@ -208,21 +211,21 @@ class Graph:
                 except KeyError:
                     visited_nodes = set()
                 colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
-                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors)
-                nx.draw_networkx_labels(self.g, pos=pos)
-                nx.draw_networkx_labels(self.g, pos={k: (x, y + 7.5) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r')
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, node_size=300, ax=ax)
+                nx.draw_networkx_labels(self.g, pos=pos, ax=ax)
+                nx.draw_networkx_labels(self.g, pos={k: (x, y + 4) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r', ax=ax)
                 
                 G = self.g
                 curved_edges = [edge for edge in G.edges() if reversed(edge) in G.edges()]
                 straight_edges = list(set(G.edges()) - set(curved_edges))
-                nx.draw_networkx_edges(G, pos)
+                nx.draw_networkx_edges(G, pos, ax=ax)
                 # arc_rad = 0.15
-                # nx.draw_networkx_edges(G, pos, edgelist=curved_edges, connectionstyle=f'arc3, rad = {arc_rad}')
-                # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
+                # nx.draw_networkx_edges(G, pos, edgelist=curved_edges, connectionstyle=f'arc3, rad = {arc_rad}', ax=ax)
+                # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6. ax=ax)
                 
             else:
                 pos = nx.nx_agraph.graphviz_layout(self.g, prog='dot')
-                nx.draw(self.g, pos=pos, with_labels=True, node_color='c')
+                nx.draw(self.g, pos=pos, with_labels=True, node_color='c', ax=ax)
                 # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
         
         if save:

@@ -16,7 +16,7 @@ def main(idx=0):
     G.t.visualize(save=True, filename=fn.format(f'{idx}_tree.png'))
     pickle.dump(G, open(f'gif/{idx}_graph.pkl', 'wb'))
     
-    gsst = GSST(G, filename=fn.format(idx))
+    gsst = GSST(tree=G.t, filename=fn.format(idx))
     gsst.search(visualize=True)
     print(f'COMPLETED!\nTime: {gsst.t}, Number of searchers: {gsst.num_searcher}')
     gsst.visualize()    
