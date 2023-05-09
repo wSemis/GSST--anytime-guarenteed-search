@@ -184,12 +184,18 @@ class Graph:
         if not self.is_tree():
             if not hasattr(self, 't'):
                 pos = nx.spring_layout(self.g, k=3)
-                nx.draw(self.g, pos=pos, with_labels=True)
+                nx.draw(self.g, pos=pos, with_labels=True, node_color='c')
                 # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
             else:
                 pos = nx.spring_layout(self.g, k=3)
-                nx.draw_networkx_nodes(self.g, pos=pos)
+                try:
+                    visited_nodes = {node for node in self.g.nodes() if self.g.nodes[node]['visited']}
+                except KeyError:
+                    visited_nodes = set()
+                colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors)
                 nx.draw_networkx_labels(self.g, pos=pos)
+
                 tree_edges = self.t.g.edges()
                 non_tree_edges = self.B
                 nx.draw_networkx_edges(self.g, pos=pos, edgelist=tree_edges, edge_color='r')
@@ -201,7 +207,7 @@ class Graph:
                     visited_nodes = {node for node in self.g.nodes() if self.g.nodes[node]['visited']}
                 except KeyError:
                     visited_nodes = set()
-                colors = ['g' if node in visited_nodes else 'b' for node in self.g.nodes()]
+                colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
                 nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors)
                 nx.draw_networkx_labels(self.g, pos=pos)
                 nx.draw_networkx_labels(self.g, pos={k: (x, y + 7.5) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r')
@@ -216,7 +222,7 @@ class Graph:
                 
             else:
                 pos = nx.nx_agraph.graphviz_layout(self.g, prog='dot')
-                nx.draw(self.g, pos=pos, with_labels=True)
+                nx.draw(self.g, pos=pos, with_labels=True, node_color='c')
                 # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
         
         if save:
