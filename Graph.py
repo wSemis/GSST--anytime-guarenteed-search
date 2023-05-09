@@ -29,7 +29,7 @@ class Graph:
         
         nx.set_edge_attributes(self.g, edge_attrs, 'label')
     
-    def add_sta(self, sta=0):
+    def add_sta(self, sta=0) -> None:
         self.g.add_edge(*('sta', sta))
     
     def random_graph(self) -> list[list[int]]:
@@ -65,12 +65,12 @@ class Graph:
             edgeList.append(edge)
         return edgeList
     
-    def is_tree(self):
+    def is_tree(self) -> bool:
         if self.g.is_directed():
             return nx.is_tree(self.g.to_undirected())
         return nx.is_tree(self.g)
     
-    def generate_random_spanning_tree(self):
+    def generate_random_spanning_tree(self) -> None:
         if self.is_tree():
             return self
         else:
@@ -110,17 +110,17 @@ class Graph:
             self.B = non_tree_edges
             self.t.label()
            
-    def get_spanning_tree(self):
+    def get_spanning_tree(self) -> tuple["Graph", list[list[int]]]:
         if not hasattr(self, 't'):
             self.generate_random_spanning_tree()
         return self.t, self.B
     
-    def label_reverse(self, parents: list[int]):
+    def label_reverse(self, parents: list[int]) -> None:
         for i in range(0, self.g.number_of_nodes()):
             if i in parents:
                 self.g.edges[(i, parents[i])]['label'] = - self.g.edges[(parents[i], i)]['label']
     
-    def label(self):
+    def label(self) -> None:
         assert self.is_tree(), "Method only applicable to trees"
 
         parents = dict(nx.bfs_predecessors(self.g, 'sta'))

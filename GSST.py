@@ -25,6 +25,12 @@ class GSST:
         self.to_visit = {i for i in range(0, self.N - 1)}
         self.visited = {i: False for i in range(0, self.N - 1)}
         self.visited['sta'] = True
+        self.unvisited_g = {n: self.graph.g.out_degree[n]
+            for n in self.graph.g.nodes()}
+        self.unvisited_g[0] -= 1
+        self.unvisited_t = {n: self.spanning_tree.g.out_degree[n]
+            for n in self.spanning_tree.g.nodes()}
+        self.unvisited_t['sta'] -= 1
         
         #Searcher locations
         self.searcher_locations = ['sta' for _ in range(self.num_searcher)]
@@ -36,33 +42,35 @@ class GSST:
         
         self.fn = filename
     
-    def set_node_attributes(self):
+    def set_node_attributes(self) -> None:
         nx.set_node_attributes(self.spanning_tree.g, self.searcher_per_locations, 'searcher_number')
         nx.set_node_attributes(self.spanning_tree.g, self.visited, 'visited')
         
     ## Might not be correct, think about labels?
-    def can_move_searcher(self, node):
+    def can_move_searcher(self, node) -> bool:
             if self.searcher_per_locations[node] > 1:
                 return True
             
             if self.searcher_per_locations[node] == 0:
                 raise ValueError("No searcher at node {}".format(node))
-            
-            unvisited = 0
-            for neighbor in self.graph.g[node]:
-                if not self.visited[neighbor]:
-                    unvisited += 1
-                    
+                                
             # print(f'Node {node} has {unvisited} unvisited neighbors among {self.spanning_tree.g[node]}')
-            return unvisited <= 1
+            return self.unvisited_t[node] <= 1
     
-    def move_searcher(self, num, node, positive_edge=True):
+    def move_searcher(self, num, node, positive_edge=True) -> None:
         prev_node = self.searcher_locations[num]
         self.searcher_per_locations[prev_node] -= 1
         
         self.searcher_locations[num] = node
         self.searcher_per_locations[node] += 1
-        self.visited[node] = True
+        
+        if self.visited[node] == False:
+            self.visited[node] = True
+            for n in self.graph.g[node]:
+                self.unvisited_g[n] -= 1
+            for n in self.spanning_tree.g[node]:
+                self.unvisited_t[n] -= 1
+                
         if node in self.to_visit:
             self.to_visit.remove(node)
         
@@ -73,36 +81,36 @@ class GSST:
             self.spanning_tree.g[prev_node][node]['label'] += 1
 
     
-    def search_step(self):
+    def search_step(self) -> None:
         for i in range(self.num_searcher):
-                node = self.searcher_locations[i]
-                can_move = self.can_move_searcher(node)
-                
-                # print(f'Searcher {i} at {node} & t={self.t} can move: {can_move}')
-                if not can_move:
-                    continue
-                
-                adj = list(self.graph.g[node])
-                edge_labels = np.array([self.graph.g.edges[(node, neighbor)]['label'] for neighbor in adj])      
-                positive = np.where(edge_labels > 0)[0]
-                negative = np.where(edge_labels < 0)[0]
-                
-                if len(positive) > 0:
-                    idx = np.argmin(edge_labels[positive])
-                    # print(edge_labels)
-                    # print(positive)
-                    # print(positive[idx])
-                    # print(adj)
-                    next_node = adj[positive[idx]]
-                    self.move_searcher(i, next_node)
-                elif len(negative) > 0:
-                    next_node_idx = negative[0]
-                    next_node = adj[next_node_idx]
-                    self.move_searcher(i, next_node, positive_edge=False)
-                else:
-                    continue
+            node = self.searcher_locations[i]
+            can_move = self.can_move_searcher(node)
+            
+            # print(f'Searcher {i} at {node} & t={self.t} can move: {can_move}')
+            if not can_move:
+                continue
+            
+            adj = list(self.graph.g[node])
+            edge_labels = np.array([self.graph.g.edges[(node, neighbor)]['label'] for neighbor in adj])      
+            positive = np.where(edge_labels > 0)[0]
+            negative = np.where(edge_labels < 0)[0]
+            
+            if len(positive) > 0:
+                idx = np.argmin(edge_labels[positive])
+                # print(edge_labels)
+                # print(positive)
+                # print(positive[idx])
+                # print(adj)
+                next_node = adj[positive[idx]]
+                self.move_searcher(i, next_node)
+            elif len(negative) > 0:
+                next_node_idx = negative[0]
+                next_node = adj[next_node_idx]
+                self.move_searcher(i, next_node, positive_edge=False)
+            else:
+                continue
         
-    def search(self, visualize=False):
+    def search(self, visualize=False) -> None:
         print('Search started with {} searchers'.format(self.num_searcher))
         if visualize:
             self.png_saved = True
@@ -123,7 +131,7 @@ class GSST:
             if visualize:
                 self.history[-1].visualize(save=True,filename=f'{self.fn}_{self.t}.png')
     
-    def visualize(self):
+    def visualize(self) -> None:
         fns = []
         for i in range(self.t + 1):
             if not self.png_saved:
