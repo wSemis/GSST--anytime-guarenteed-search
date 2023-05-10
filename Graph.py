@@ -33,7 +33,8 @@ class Graph:
         self.g.add_edge(*('sta', sta))
     
     def random_graph(self) -> list[list[int]]:
-        k = BRANCHING_FACTOR
+        # k = BRANCHING_FACTOR
+        k = np.random.randint(2, 5)
         print(f'Randomed branching factor k = {k}')
         N = np.random.randint(10, 20)
 
@@ -190,22 +191,35 @@ class Graph:
                 nx.draw(self.g, pos=pos, with_labels=True, node_color='c', ax=ax)
                 # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6, ax=ax)
             else:
-                pos = nx.spring_layout(self.g, k=3)
+                # pos = nx.nx_agraph.graphviz_layout(self.t.g, prog='dot',args="-Grankdir=LR")
+                pos = nx.spring_layout(self.t.g, k=3, seed = 1)
                 try:
                     visited_nodes = {node for node in self.g.nodes() if self.g.nodes[node]['visited']}
                 except KeyError:
                     visited_nodes = set()
                 colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
-                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, ax=ax)
+                colors = ['r' if node == 'sta' else c for node, c in zip(self.g.nodes(), colors)]
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, node_size=300, ax=ax)
                 nx.draw_networkx_labels(self.g, pos=pos, ax=ax)
+                nx.draw_networkx_labels(self.g, pos={k: (x, y + 0.05) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r', ax=ax)
+                nx.draw_networkx_labels(self.g, pos={k: (x, y - 0.05) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'guard_number'), font_color='r', ax=ax)
 
                 tree_edges = self.t.g.edges()
                 non_tree_edges = self.B
-                nx.draw_networkx_edges(self.g, pos=pos, edgelist=tree_edges, edge_color='r', ax=ax)
-                nx.draw_networkx_edges(self.g, pos=pos, edgelist=non_tree_edges, style='dashed', ax=ax)
+                visited_edges = set()
+                for edge in self.g.edges():
+                    a,b = edge
+                    if a in visited_nodes and b in visited_nodes:
+                        visited_edges.add((a,b))
+                        visited_edges.add((b,a))
+                        
+                tree_edge_colors= ['g' if edge in visited_edges else 'r' for edge in tree_edges]
+                non_tree_edge_colors = ['g' if edge in visited_edges else 'b' for edge in non_tree_edges]
+                nx.draw_networkx_edges(self.g, pos=pos, edgelist=tree_edges, edge_color=tree_edge_colors, ax=ax)
+                nx.draw_networkx_edges(self.g, pos=pos, edgelist=non_tree_edges, style='dashed', edge_color=non_tree_edge_colors, ax=ax)
         else:
             if self.g.is_directed():
-                pos = nx.nx_agraph.graphviz_layout(self.g, prog='dot',args="-Grankdir=LR")
+                pos = nx.nx_agraph.graphviz_layout(self.t.g, prog='circo',args="-Grankdir=LR", root='sta')
                 try:
                     visited_nodes = {node for node in self.g.nodes() if self.g.nodes[node]['visited']}
                 except KeyError:
