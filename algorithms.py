@@ -9,14 +9,15 @@ class GSST_L(GSST):
     def __init__(self, graph: Graph = None, filename='test_run') -> None:
         self.number_of_guards = 0
         self.N = graph.g.number_of_nodes()
-        self.guard_per_locations = {i: 0 for i in range(self.N - 1)}
+        self.guard_per_locations = {i: 0 for i in graph.g.nodes()}
         self.guard_per_locations['sta'] = self.number_of_guards
+        self.to_guard = None
 
         super().__init__(graph, filename=filename)
         self.guard_locations = []
         self.guard_degree = {0: set(), 1:set()}
         
-        self.non_tree_edge_nodes = {i: False for i in range(self.N - 1)}
+        self.non_tree_edge_nodes = {i: False for i in graph.g.nodes()}
         self.non_tree_edge_nodes['sta'] = False
         for edge in self.B:
             a, b = edge
@@ -123,6 +124,20 @@ class GSST_L(GSST):
                 if deg == 0:
                     self.free_guard(g)
             
+    def after_search_step(self) -> None:
+        if self.to_guard == None:
+            return
+
+        node = self.to_guard
+        self.to_guard = None
+        
+        if  self.unvisited_g[node] == 0 or\
+            self.guard_per_locations[node] > 0 or\
+            self.searcher_per_locations[node] > 0:
+            return 
+            
+        self.call_guard(node)
+        
     # @override
     def can_move_searcher(self, node) -> bool:
         tree_can_move = super().can_move_searcher(node)
@@ -143,5 +158,5 @@ class GSST_L(GSST):
             self.searcher_per_locations[node] > 1:
             return True
         
-        self.call_guard(node)
+        self.to_guard = node
         return True

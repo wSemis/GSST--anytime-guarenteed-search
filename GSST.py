@@ -5,7 +5,7 @@ from Graph import Graph
 import os
 import imageio
 
-WALL_TIME = 50
+WALL_TIME = 5
 class GSST:
     def __init__(self, graph: "Graph"=None, tree: "Graph"=None, filename='test_run') -> None:
         if tree == None:
@@ -24,19 +24,20 @@ class GSST:
         self.N = self.graph.g.number_of_nodes()
         
         #Visitation status
-        self.to_visit = {i for i in range(0, self.N - 1)}
-        self.visited = {i: False for i in range(0, self.N - 1)}
+        self.to_visit = {i for i in self.graph.g.nodes()}
+        self.to_visit.remove('sta')
+        self.visited = {i: False for i in self.graph.g.nodes()}
         self.visited['sta'] = True
         self.unvisited_g = {n: self.graph.g.degree[n]
             for n in self.graph.g.nodes()}
-        self.unvisited_g[0] -= 1
+        self.unvisited_g[graph.start] -= 1
         self.unvisited_t = {n: self.spanning_tree.g.out_degree[n]
             for n in self.spanning_tree.g.nodes()}
-        self.unvisited_t[0] -= 1
+        self.unvisited_t[graph.start] -= 1
         
         #Searcher locations
         self.searcher_locations = ['sta' for _ in range(self.num_searcher)]
-        self.searcher_per_locations ={i: 0 for i in range(self.N - 1)}
+        self.searcher_per_locations ={i: 0 for i in self.graph.g.nodes()}
         self.searcher_per_locations['sta'] = self.num_searcher
         
         self.set_node_attributes()
@@ -118,16 +119,22 @@ class GSST:
                 self.move_searcher(i, next_node, positive_edge=False)
             else:
                 continue
+            
+            self.after_search_step()
+            
+    def after_search_step(self) -> None:
+        pass
         
     def search(self, visualize=False) -> None:
         print('Search started with {} searchers'.format(self.num_searcher))
+        
+        self.png_saved = visualize
         if visualize:
-            self.png_saved = True
             self.history[-1].visualize(save=True, filename=f'{self.fn}_{self.t}.png')
                                 
         while len(self.to_visit) != 0:
             # print(f'At time {self.t}, {(self.to_visit)} nodes left to visit')
-            if self.t > WALL_TIME:
+            if self.t > WALL_TIME * self.N:
                 print(f'INTERRUPTED!\nTime: {self.t}, Number of searchers: {self.num_searcher}, unvisited area: {self.to_visit}')
                 exit()
                 

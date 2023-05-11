@@ -3,11 +3,13 @@ from copy import deepcopy
 import networkx as nx
 import matplotlib.pyplot as plt
 from collections import Counter
+
 BRANCHING_FACTOR = 4
 
 class Graph:
-    def __init__(self, arg= None, directed=False) -> None:
+    def __init__(self, arg= None, directed=False, pos=None) -> None:
         self.is_directed = directed
+        self.start = None
         
         if arg is None:
             edgeList = self.random_graph()
@@ -28,8 +30,10 @@ class Graph:
             self.g = nx.Graph(edgeList)
         
         nx.set_edge_attributes(self.g, edge_attrs, 'label')
-    
+        self.pos = pos
+        
     def add_sta(self, sta=0) -> None:
+        self.start = sta
         self.g.add_edge(*('sta', sta))
     
     def random_graph(self) -> list[list[int]]:
@@ -108,6 +112,8 @@ class Graph:
                 non_tree_edges.append((min(a,b), max(a,b)))
                     
             self.t = Graph(edges, directed=False)
+            self.t.start = self.start
+            self.t.pos = self.pos
             self.B = non_tree_edges
             self.t.label()
            
@@ -177,32 +183,78 @@ class Graph:
         #     self.mu = max_edge
         # else:
         #     self.mu = max_edge + 1
-        self.mu = self.g.edges[('sta', 0)]['label']
+        self.mu = self.g.edges[('sta', self.start)]['label']
         self.g = self.g.to_directed()
         self.label_reverse(parents)
         
-    def visualize(self, save=False, filename='testrun', ax=None):
-        if ax is None:
-            fig, ax = plt.subplots(1,1, figsize=(10, 10))
+    def visualize(self, save=False, filename='testrun', ax=None):    
+        if hasattr(self, 'fig_size'):
+            fig_size = self.fig_size
+        else:
+            fig_size = (10, 10)
         
+        if ax is None:
+            fig, ax = plt.subplots(1,1, figsize=fig_size)
+        ax.set_xticks(np.arange(0, fig_size[0], 1))
+        ax.set_yticks(np.arange(0, fig_size[1], 1))
+        
+        if hasattr(self, 'node_size'):
+            node_size = self.node_size
+        else:
+            node_size = 300
+            
+        if hasattr(self, 'offset'):
+            offset = self.offset
+        else:
+            offset = 0.5
+                    
+        # plt.grid('on')
+        # plt.axis('on')
+        ax.set_xlim(0, fig_size[0])
+        ax.set_ylim(0, fig_size[1])
+
+        if hasattr(self, 'bg'):
+            bg = plt.imread(self.bg)
+            ax.imshow(bg, extent=[0, fig_size[0], 0, fig_size[1]])     
         if not self.is_tree():
             if not hasattr(self, 't'):
-                pos = nx.spring_layout(self.g, k=3)
-                nx.draw(self.g, pos=pos, with_labels=True, node_color='c', ax=ax)
+                if self.pos is None:
+                    pos = nx.planar_layout(self.g)
+                else:
+                    pos = self.pos
+                    # print(f'Use existing pos {pos}')
+                nx.draw_networkx(self.g, pos=pos, with_labels=True, node_color='c', ax=ax, node_size=node_size, width=3)
+                # ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+
                 # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6, ax=ax)
             else:
                 # pos = nx.nx_agraph.graphviz_layout(self.t.g, prog='dot',args="-Grankdir=LR")
-                pos = nx.spring_layout(self.t.g, k=3, seed = 1)
+                if self.pos is None:
+                    pos = nx.spring_layout(self.t.g, k=3, seed = 1)
+                else:
+                    pos = self.pos
+                    
                 try:
                     visited_nodes = {node for node in self.g.nodes() if self.g.nodes[node]['visited']}
                 except KeyError:
                     visited_nodes = set()
                 colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
                 colors = ['r' if node == 'sta' else c for node, c in zip(self.g.nodes(), colors)]
-                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, node_size=300, ax=ax)
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, node_size=node_size, ax=ax)
                 nx.draw_networkx_labels(self.g, pos=pos, ax=ax)
-                nx.draw_networkx_labels(self.g, pos={k: (x, y + 0.05) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r', ax=ax)
-                nx.draw_networkx_labels(self.g, pos={k: (x, y - 0.05) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'guard_number'), font_color='r', ax=ax)
+                
+                sign = '😃'                
+                searcher_label = nx.get_node_attributes(self.g, 'searcher_number')
+                guard_label = nx.get_node_attributes(self.g, 'guard_number')
+                for k,v in searcher_label.items():
+                    if v > 0:
+                        searcher_label[k] = f'{sign} {v}'
+
+                for k,v in guard_label.items():
+                    if v > 0:
+                        guard_label[k] = f'{sign} {v}'
+                nx.draw_networkx_labels(self.g, pos={k: (x, y + offset) for k,(x,y) in pos.items()}, labels=searcher_label, font_color='r', ax=ax)
+                nx.draw_networkx_labels(self.g, pos={k: (x, y - offset) for k,(x,y) in pos.items()}, labels=guard_label, font_color='r', ax=ax)
 
                 tree_edges = self.t.g.edges()
                 non_tree_edges = self.B
@@ -225,7 +277,7 @@ class Graph:
                 except KeyError:
                     visited_nodes = set()
                 colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
-                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, node_size=300, ax=ax)
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, node_size=node_size, ax=ax)
                 nx.draw_networkx_labels(self.g, pos=pos, ax=ax)
                 nx.draw_networkx_labels(self.g, pos={k: (x, y + 4) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r', ax=ax)
                 
@@ -239,7 +291,7 @@ class Graph:
                 
             else:
                 pos = nx.nx_agraph.graphviz_layout(self.g, prog='dot')
-                nx.draw(self.g, pos=pos, with_labels=True, node_color='c', ax=ax)
+                nx.draw(self.g, pos=pos, with_labels=True, node_color='c', ax=ax, node_size=node_size)
                 # nx.draw_networkx_edge_labels(self.g, pos=pos, edge_labels=nx.get_edge_attributes(self.g, 'label'), label_pos=0.6)
         
         if save:
