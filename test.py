@@ -1,6 +1,5 @@
 from graph import Graph
-from gsst import GSST
-from algorithms import GSST_L
+from gsst import GSST, GSST_L
 import os
 import pickle
 
