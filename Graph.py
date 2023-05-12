@@ -214,8 +214,7 @@ class Graph:
         ax.set_ylim(0, fig_size[1])
 
         if hasattr(self, 'bg'):
-            bg = plt.imread(self.bg)
-            ax.imshow(bg, extent=[0, fig_size[0], 0, fig_size[1]])     
+            ax.imshow(self.bg, extent=[0, fig_size[0], 0, fig_size[1]])     
         if not self.is_tree():
             if not hasattr(self, 't'):
                 if self.pos is None:
@@ -237,49 +236,117 @@ class Graph:
                 try:
                     visited_nodes = {node for node in self.g.nodes() if self.g.nodes[node]['visited']}
                 except KeyError:
-                    visited_nodes = set()
-                colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
-                colors = ['r' if node == 'sta' else c for node, c in zip(self.g.nodes(), colors)]
-                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, node_size=node_size, ax=ax)
-                nx.draw_networkx_labels(self.g, pos=pos, ax=ax)
+                    visited_nodes = set('sta')
+                    
+                searcher_per_node = nx.get_node_attributes(self.g, 'searcher_number')
+                guard_per_node = nx.get_node_attributes(self.g, 'guard_number')
+                robot_per_node = {k: searcher_per_node[k] + guard_per_node[k] for k in searcher_per_node.keys()}
                 
-                sign = '😃'                
-                searcher_label = nx.get_node_attributes(self.g, 'searcher_number')
-                guard_label = nx.get_node_attributes(self.g, 'guard_number')
-                for k,v in searcher_label.items():
-                    if v > 0:
-                        searcher_label[k] = f'{sign} {v}'
+                node_type = {}
+                for n in self.g.nodes():
+                    if n in visited_nodes:
+                        node_type[n] = 'visited'
+                        if n in robot_per_node and robot_per_node[n] > 0:
+                            node_type[n] = 'current'
+                    else:
+                        node_type[n] = 'unvisited'
+                        
+                node_colors = []
+                for node in self.g.nodes():
+                    if node == 'sta':
+                        node_colors.append('red')
+                    elif node_type[node] == 'unvisited':
+                        node_colors.append('grey')
+                    elif node_type[node] == 'visited':
+                        node_colors.append('green')
+                    else:
+                        node_colors.append('cyan')
+                node_label = {n: robot_per_node[n] if node_type[n]=='current' else '' for n in self.g.nodes()}
+        
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=node_colors, node_size=node_size, ax=ax)
+                nx.draw_networkx_labels(self.g, labels=node_label, pos=pos, ax=ax)
+                
+                # sign = '😃'                
+                # searcher_label = nx.get_node_attributes(self.g, 'searcher_number')
+                # guard_label = nx.get_node_attributes(self.g, 'guard_number')
+                # for k,v in searcher_label.items():
+                #     if v > 0:
+                #         searcher_label[k] = f'{sign} {v}'
 
-                for k,v in guard_label.items():
-                    if v > 0:
-                        guard_label[k] = f'{sign} {v}'
-                nx.draw_networkx_labels(self.g, pos={k: (x, y + offset) for k,(x,y) in pos.items()}, labels=searcher_label, font_color='r', ax=ax)
-                nx.draw_networkx_labels(self.g, pos={k: (x, y - offset) for k,(x,y) in pos.items()}, labels=guard_label, font_color='r', ax=ax)
+                # for k,v in guard_label.items():
+                #     if v > 0:
+                #         guard_label[k] = f'{sign} {v}'
+                # nx.draw_networkx_labels(self.g, pos={k: (x, y + offset) for k,(x,y) in pos.items()}, labels=searcher_label, font_color='r', ax=ax)
+                # nx.draw_networkx_labels(self.g, pos={k: (x, y - offset) for k,(x,y) in pos.items()}, labels=guard_label, font_color='r', ax=ax)
 
                 tree_edges = self.t.g.edges()
                 non_tree_edges = self.B
-                visited_edges = set()
+                # visited_edges = set()
+                
+                edge_colors = []
+                edge_styles = []
+                
                 for edge in self.g.edges():
                     a,b = edge
-                    if a in visited_nodes and b in visited_nodes:
-                        visited_edges.add((a,b))
-                        visited_edges.add((b,a))
+                    if (a,b) in tree_edges or (b,a) in tree_edges:
+                        edge_styles.append('-')
+                    else:
+                        edge_styles.append('--')
+                    
+                    if node_type[a] == 'unvisited' and node_type[b] == 'unvisited':
+                        edge_colors.append('black')
+                    elif node_type[a] == 'unvisited' or node_type[b] == 'unvisited':
+                        edge_colors.append('cyan')
+                    else:
+                        edge_colors.append('green')
                         
-                tree_edge_colors= ['g' if edge in visited_edges else 'r' for edge in tree_edges]
-                non_tree_edge_colors = ['g' if edge in visited_edges else 'b' for edge in non_tree_edges]
-                nx.draw_networkx_edges(self.g, pos=pos, edgelist=tree_edges, edge_color=tree_edge_colors, ax=ax)
-                nx.draw_networkx_edges(self.g, pos=pos, edgelist=non_tree_edges, style='dashed', edge_color=non_tree_edge_colors, ax=ax)
+                    # a,b = edge
+                    # if a in visited_nodes and b in visited_nodes:
+                    #     visited_edges.add((a,b))
+                    #     visited_edges.add((b,a))
+                        
+                # tree_edge_colors= ['g' if edge in visited_edges else 'r' for edge in tree_edges]
+                # non_tree_edge_colors = ['g' if edge in visited_edges else 'b' for edge in non_tree_edges]
+                # nx.draw_networkx_edges(self.g, pos=pos, edgelist=tree_edges, edge_color=tree_edge_colors, ax=ax)
+                # nx.draw_networkx_edges(self.g, pos=pos, edgelist=non_tree_edges, style='dashed', edge_color=non_tree_edge_colors, ax=ax)
+                edge_styles = np.array(edge_styles)
+                nx.draw_networkx_edges(self.g, pos=pos, edge_color=edge_colors, style=edge_styles, ax=ax, width=3)
         else:
             if self.g.is_directed():
                 pos = nx.nx_agraph.graphviz_layout(self.t.g, prog='circo',args="-Grankdir=LR", root='sta')
                 try:
                     visited_nodes = {node for node in self.g.nodes() if self.g.nodes[node]['visited']}
                 except KeyError:
-                    visited_nodes = set()
-                colors = ['g' if node in visited_nodes else 'c' for node in self.g.nodes()]
-                nx.draw_networkx_nodes(self.g, pos=pos, node_color=colors, node_size=node_size, ax=ax)
-                nx.draw_networkx_labels(self.g, pos=pos, ax=ax)
-                nx.draw_networkx_labels(self.g, pos={k: (x, y + 4) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r', ax=ax)
+                    visited_nodes = set('sta')
+                
+                searcher_per_node = nx.get_node_attributes(self.g, 'searcher_number')
+                guard_per_node = nx.get_node_attributes(self.g, 'guard_number')
+                robot_per_node = {k: searcher_per_node[k] + guard_per_node[k] for k in searcher_per_node.keys()}
+                
+                node_type = {}
+                for n in self.g.nodes():
+                    if n in visited_nodes:
+                        node_type[n] = 'visited'
+                        if n in robot_per_node and robot_per_node[n] > 0:
+                            node_type[n] = 'current'
+                    else:
+                        node_type[n] = 'unvisited'
+                        
+                node_colors = []
+                for node in self.g.nodes():
+                    if node == 'sta':
+                        node_colors.append('red')
+                    elif node_type[node] == 'unvisited':
+                        node_colors.append('grey')
+                    elif node_type[node] == 'visited':
+                        node_colors.append('green')
+                    else:
+                        node_colors.append('cyan')
+
+                node_label = {n: robot_per_node[n] if node_type[n]=='current' else '' for n in self.g.nodes()}
+                nx.draw_networkx_nodes(self.g, pos=pos, node_color=node_colors, node_size=node_size, ax=ax)
+                nx.draw_networkx_labels(self.g, labels=node_label, pos=pos, ax=ax)
+                # nx.draw_networkx_labels(self.g, pos={k: (x, y + 4) for k,(x,y) in pos.items()}, labels=nx.get_node_attributes(self.g, 'searcher_number'), font_color='r', ax=ax)
                 
                 G = self.g
                 curved_edges = [edge for edge in G.edges() if reversed(edge) in G.edges()]
