@@ -1,13 +1,9 @@
-# GSST--anytime-guarenteed-search
+# GSST
 
-Implementation of GSST anytime guaranteed search
+Implementation of GSST: anytime guaranteed search with spanning trees
 
-___
+## Setup
 
-## Requirements
-
-numpy, matplotlib, networkx, pygraphviz
-
-___
-
-# Under Construction
+```sh
+$ pip install numpy matplotlib networkx pygraphviz
+```

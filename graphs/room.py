@@ -15,7 +15,7 @@ locations = {
 
 import sys
 sys.path.append('./')
-from Graph import Graph
+from graph import Graph
 
 fn = 'demo/room'
 import os

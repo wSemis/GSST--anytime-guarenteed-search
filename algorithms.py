@@ -1,9 +1,8 @@
 import networkx as nx
 import numpy as np
 import time
-from GSST import GSST
-from Graph import Graph
-# from typing import override
+from gsst import GSST
+from graph import Graph
 
 class GSST_L(GSST):
     def __init__(self, graph: Graph = None, filename='test_run') -> None:
