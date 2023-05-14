@@ -280,19 +280,6 @@ class Graph:
         
                 nx.draw_networkx_nodes(self.g, pos=pos, node_color=node_colors, node_size=node_size, ax=ax)
                 nx.draw_networkx_labels(self.g, labels=node_label, pos=pos, ax=ax)
-                
-                # sign = '😃'                
-                # searcher_label = nx.get_node_attributes(self.g, 'searcher_number')
-                # guard_label = nx.get_node_attributes(self.g, 'guard_number')
-                # for k,v in searcher_label.items():
-                #     if v > 0:
-                #         searcher_label[k] = f'{sign} {v}'
-
-                # for k,v in guard_label.items():
-                #     if v > 0:
-                #         guard_label[k] = f'{sign} {v}'
-                # nx.draw_networkx_labels(self.g, pos={k: (x, y + offset) for k,(x,y) in pos.items()}, labels=searcher_label, font_color='r', ax=ax)
-                # nx.draw_networkx_labels(self.g, pos={k: (x, y - offset) for k,(x,y) in pos.items()}, labels=guard_label, font_color='r', ax=ax)
 
                 tree_edges = self.t.g.edges()
                 non_tree_edges = self.B
@@ -395,11 +382,3 @@ if __name__ == "__main__":
     print("Random spanning tree")
     g.generate_random_spanning_tree()
     g.visualize()
-    # print(g.t.g[0])
-    # print('is tree: ',g.t.is_tree())
-    # print('Vertex number: ', len(g.t.g.nodes()))
-    # print(f'Tree edges:{len(g.t.g.edges())} \nNon-tree edges: {len(g.B)}')
-    # g.t.visualize()
-    
-    # g.t.label()
-    # g.t.visualize()

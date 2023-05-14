@@ -5,5 +5,5 @@ Implementation of GSST: anytime guaranteed search with spanning trees
 ## Setup
 
 ```sh
-$ pip install numpy matplotlib networkx pygraphviz
+$ pip install numpy matplotlib networkx pygraphviz imageio
 ```

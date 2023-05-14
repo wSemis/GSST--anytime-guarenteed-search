@@ -312,4 +312,35 @@ class GSST_R(GSST):
         self.N = graph.g.number_of_nodes()
 
         super().__init__(graph, filename=filename)
+        self.searcher_locations = ['sta']
+        self.searcher_per_locations['sta'] = 1
+        self.num_searcher = 1
+        self.history.clear()
+        self.save_history()
+
+    def search(self, visualize=False) -> None:
+        '''
+        Performs Algorithm 6, ignores tree labelings.
+        '''
+        print('Search started with {} searchers'.format(self.num_searcher))
+        self.png_saved = visualize
+        if visualize:
+            self.history[-1].visualize(save=True, filename=f'{self.fn}_{self.t}.png')
+        while len(self.to_visit) != 0:
+            if self.t > WALL_TIME * self.N:
+                print(f'INTERRUPTED!\nTime: {self.t}, Number of searchers: {self.num_searcher}, unvisited area: {self.to_visit}')
+                exit()
+            self.search_step()
+            self.set_node_attributes()      
+            self.save_history()
+            self.t += 1
+            if visualize:
+                self.visualize_step(self.t)
+
+    def search_step(self) -> None:
+        '''
+        Performs search for a single step.
+        '''
         print(self.__dict__)
+        print(self.spanning_tree.g.edges())
+        exit()
